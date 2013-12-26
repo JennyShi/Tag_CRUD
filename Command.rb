@@ -1,4 +1,4 @@
-require 'rally_api_emc_sso'
+require 'rally_api'
 require 'csv'
 
 require './Tag_CRUD.rb'

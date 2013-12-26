@@ -1,4 +1,4 @@
-require 'rally_api_emc_sso' 
+require 'rally_api' 
 require 'date'
 class Tag_CRUD
   
@@ -11,6 +11,8 @@ class Tag_CRUD
     #==================== Making a connection to Rally ====================
     config = {:base_url => "https://rally1.rallydev.com/slm"}
     config = {:workspace => workspace}
+    config[:username] = "username"
+    config[:password] ="password"
     config[:project] = project
     config[:headers] = headers #from RallyAPI::CustomHttpHeader.new()
 
@@ -23,11 +25,17 @@ class Tag_CRUD
     if (is_userstory(row["Formatted ID"]))
       puts "is user story"
       type = "story"
-      res = find_userstory(row)
+      res = find_userstory_by_id(row)
       @object = res.first
       if (res.length != 0)
-        find_tag(row)
-        update_tag(row,type)
+        result = find_tag(row)
+        @tag = result.first
+        #puts @tag["_ref"]
+        if (result.count == 0)
+          puts "Can't update!"
+        else
+          update_tag(row,type)
+        end
       else
         puts "Can't update Tags!"
       end
@@ -39,8 +47,12 @@ class Tag_CRUD
       if (res.length != 0)
         result = find_tag(row)
         @tag = result.first
-        puts @tag._ref
-        update_tag(row,type)
+        #puts @tag["_ref"]
+        if (result.count == 0)
+          puts "Can't update!"
+        else
+          update_tag(row,type)
+        end
       else
         puts "Can't update Tags!"
       end
@@ -66,7 +78,7 @@ class Tag_CRUD
     end
   end
   
-  def find_userstory(row)
+  def find_userstory_by_id(row)
     query = RallyAPI::RallyQuery.new()
     query.type = "HierarchicalRequirement"
     query.fetch = "Name,FormattedID"
@@ -90,8 +102,8 @@ class Tag_CRUD
   def find_feature(row)
     query = RallyAPI::RallyQuery.new()
     query.type = "portfolioItem"
-    query.fetch = "Name,FormattedID"
-    query.query_string = "(FormattedID = \"#{row["Formatted ID"]}\")"
+    query.fetch = "Name,FormattedID,Project"
+    query.query_string = "((FormattedID = \"#{row["Formatted ID"]}\")AND(Project.Name = \"#{row["Project"]}\"))"
     results = @rally.find(query)
   
  # result.first.read
@@ -111,18 +123,14 @@ class Tag_CRUD
   
   def update_tag(row,type)
     @object.read
-    field = {}
-    existing_tags = @object.Tags
-    updated_tags = existing_tags
+    existing_tags = @object.Tags.results
+    puts "existing tags: #{existing_tags}"
+    updated_tags = row["Tags"]
     
-    if !updated_tags.results.count == 0 then
-     updated_tags.push(@tag)
-    else
-     updated_tags = [@tag]
-     puts "Inside else"
-    end
-    field["Tags"] = updated_tags
-    puts "Updated Tags: #{updated_tags.count} and type is #{type} and tags is #{field["Tags"]} and ID: #{@object["FormattedID"]}"
+    field = {}
+    
+    field["Tags"] = [@tag]
+    puts "Updated Tags: #{updated_tags} and type is #{type} and ID: #{@object["FormattedID"]}"
     @rally.update("#{type}","FormattedID|#{@object["FormattedID"]}",field)
     puts "#{row["Formatted ID"  ]} updated"
   end
@@ -134,9 +142,10 @@ class Tag_CRUD
     query.query_string = "(Name = \"#{row["Tags"]}\")"
     results = @rally.find(query)
     
-    if (results != nil)
+    if (results.count != 0)
       #results.read
       puts "Find the tag #{row["Tags"]}!"
+      #puts "Name: #{results.inspect}"
       results.each do |res|
         res.read
         puts "Name: #{res.Name}"
@@ -144,6 +153,7 @@ class Tag_CRUD
     else
       puts "No such tag #{row["Tags"]}!"
     end
-    results
+    #puts "results #{results.inspect}"
+    return results
   end
 end
