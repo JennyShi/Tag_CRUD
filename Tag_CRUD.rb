@@ -11,8 +11,6 @@ class Tag_CRUD
     #==================== Making a connection to Rally ====================
     config = {:base_url => "https://rally1.rallydev.com/slm"}
     config = {:workspace => workspace}
-    config[:username] = "username"
-    config[:password] ="password"
     config[:project] = project
     config[:headers] = headers #from RallyAPI::CustomHttpHeader.new()
 
